@@ -11,6 +11,13 @@ export default function DashboardPage() {
 
   const quickActions = [
     {
+      title: 'Test Onboarding Flow',
+      description: 'Test complete user journey from signup to content',
+      icon: Link2,
+      href: '/dashboard/onboarding',
+      color: '#0A66C2',
+    },
+    {
       title: 'Generate Content',
       description: 'Create AI-powered social media content',
       icon: FileText,
