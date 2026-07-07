@@ -45,12 +45,6 @@ export function BrandProfileForm() {
     product_description: '',
   });
 
-  useEffect(() => {
-    if (client) {
-      loadProfile();
-    }
-  }, [client]);
-
   const loadProfile = async () => {
     if (!client) {
       console.error('SDK client not initialized');
@@ -76,6 +70,13 @@ export function BrandProfileForm() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (client) {
+      loadProfile();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client]);
 
   const handleSave = async () => {
     if (!client) {
