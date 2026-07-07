@@ -29,6 +29,7 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   { name: 'Overview', href: '/dashboard', icon: Home },
+  { name: 'Onboarding Flow', href: '/dashboard/onboarding', icon: User },
   { name: 'Brand Profile', href: '/dashboard/brand', icon: Palette },
   { name: 'Content Generator', href: '/dashboard/content', icon: FileText },
   { name: 'Drafts', href: '/dashboard/drafts', icon: FileText },
