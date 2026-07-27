@@ -125,6 +125,11 @@ export default function ContentGenerationPage() {
       return;
     }
 
+    if (!client) {
+      setError('SDK client is not ready yet. Please try again in a moment.');
+      return;
+    }
+
     setIsGenerating(true);
     setError('');
     setDrafts([]);

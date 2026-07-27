@@ -66,12 +66,9 @@ export function ConnectionsList({ onConnectionUpdated }: ConnectionsListProps) {
       });
 
       console.log('✅ Connection response:', response);
-      console.log('📦 Response data:', response.responseData);
-      console.log('🔑 Auth URLs (direct):', response.auth_urls);
-      console.log('🔑 Auth URLs (in data):', response.responseData?.auth_urls);
+      console.log('🔑 Auth URLs:', response.auth_urls);
 
-      // Check both locations for auth_urls
-      const authUrls = response.auth_urls || response.responseData?.auth_urls;
+      const authUrls = response.auth_urls;
 
       if (authUrls && authUrls[platform]) {
         const authUrl = authUrls[platform];

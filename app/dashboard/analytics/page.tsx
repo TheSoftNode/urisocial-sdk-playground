@@ -29,24 +29,34 @@ export default function AnalyticsPage() {
       const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const endDate = new Date().toISOString().split('T')[0];
 
-      const performance = await client.analytics.getPerformance(startDate, endDate);
+      // The SDK has no time-series, per-post-list, or demographics endpoints —
+      // only aggregate performance + per-account follower stats. Rather than
+      // fabricate numbers with no real source, charts/topPosts/demographics/
+      // posting-times are left empty; each component already renders an
+      // honest "no data available" state for that (verified in their code).
+      const [performance, accountMetrics] = await Promise.all([
+        client.analytics.getPerformance(startDate, endDate),
+        client.analytics.getAccountMetrics().catch(() => ({ accounts: [] })),
+      ]);
+
+      const accounts = accountMetrics.accounts || [];
+      const total_followers = accounts.reduce((sum, a) => sum + (a.follower_count || 0), 0);
+      const follower_growth = accounts.reduce((sum, a) => sum + (a.follower_growth || 0), 0);
 
       setAnalyticsData({
         overview: {
-          total_views: 0,
-          total_likes: 0,
-          total_comments: 0,
-          total_shares: 0,
-          views_change: 0,
-          likes_change: 0,
-          comments_change: 0,
-          shares_change: 0,
+          total_posts: performance.total_posts,
+          total_impressions: performance.total_impressions,
+          total_engagements: performance.total_engagements,
+          total_reach: performance.total_reach,
+          engagement_rate: performance.engagement_rate,
+          best_performing_platform: performance.best_performing_platform,
         },
         charts: [],
         topPosts: [],
         audience: {
-          total_followers: 0,
-          follower_growth: 0,
+          total_followers,
+          follower_growth,
           demographics: {
             age_groups: [],
             top_countries: [],

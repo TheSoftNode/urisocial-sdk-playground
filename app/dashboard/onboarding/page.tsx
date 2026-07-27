@@ -79,8 +79,12 @@ export default function OnboardingTestPage() {
       const response = await client.brandProfile.update({
         brand_name: brandName,
         industry: industry,
-        target_audience: targetAudience,
-        voice_personality: brandVoice,
+        // BrandProfile has no target_audience field — there's no real
+        // equivalent to send it as; the input stays in the UI for context
+        // but isn't part of the actual API payload. voice_personality isn't
+        // real either — derived_voice is the closest actual field for a
+        // free-text tone/personality description.
+        derived_voice: brandVoice,
       });
 
       setResult({
@@ -151,8 +155,12 @@ export default function OnboardingTestPage() {
       const response = await client.brandProfile.update({
         brand_name: brandName,
         industry: industry,
-        target_audience: targetAudience,
-        voice_personality: brandVoice,
+        // BrandProfile has no target_audience field — there's no real
+        // equivalent to send it as; the input stays in the UI for context
+        // but isn't part of the actual API payload. voice_personality isn't
+        // real either — derived_voice is the closest actual field for a
+        // free-text tone/personality description.
+        derived_voice: brandVoice,
       });
 
       setResult({

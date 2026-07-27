@@ -24,6 +24,7 @@ export function VoicePersonality() {
   const [selectedVoice, setSelectedVoice] = useState('professional');
   const [voiceSample, setVoiceSample] = useState('');
   const [derivedVoice, setDerivedVoice] = useState('');
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   const hasLoaded = useRef(false);
 
   useEffect(() => {
@@ -54,14 +55,20 @@ export function VoicePersonality() {
   const handleAnalyzeVoice = async () => {
     if (!voiceSample.trim()) return;
 
+    if (!client) {
+      setAnalyzeError('SDK client is not ready yet. Please try again in a moment.');
+      return;
+    }
+
     try {
       setAnalyzing(true);
-      // AI voice analysis - mock for now since SDK method not available
-      const mockVoice = 'professional';
-      setDerivedVoice(mockVoice);
-      setSelectedVoice(mockVoice);
-    } catch (error) {
+      setAnalyzeError(null);
+      const result = await client.brandProfile.analyzeVoiceSamples([voiceSample]);
+      setDerivedVoice(result.derived_voice);
+      setSelectedVoice(result.derived_voice);
+    } catch (error: any) {
       console.error('Failed to analyze voice:', error);
+      setAnalyzeError(error.message || 'Failed to analyze voice');
     } finally {
       setAnalyzing(false);
     }
@@ -154,6 +161,9 @@ export function VoicePersonality() {
               </>
             )}
           </Button>
+          {analyzeError && (
+            <p className="text-sm text-red-600 mt-2">{analyzeError}</p>
+          )}
           {derivedVoice && (
             <p className="text-sm text-gray-600 mt-2">
               AI detected: <span className="font-medium capitalize">{derivedVoice}</span>

@@ -1,17 +1,19 @@
 'use client';
 
 import { Card } from '@/components/ui/card';
-import { TrendingUp, TrendingDown, Eye, Heart, MessageCircle, Share2 } from 'lucide-react';
+import { FileText, Eye, Heart, Radar, Percent } from 'lucide-react';
 
+// Mirrors the SDK's actual PerformanceMetrics shape (client.analytics.getPerformance()).
+// The SDK doesn't return a views/likes/comments/shares breakdown or period-over-period
+// deltas — showing those anyway would mean fabricating numbers with no real source, so
+// this reflects only what the API genuinely provides.
 interface AnalyticsData {
-  total_views: number;
-  total_likes: number;
-  total_comments: number;
-  total_shares: number;
-  views_change: number;
-  likes_change: number;
-  comments_change: number;
-  shares_change: number;
+  total_posts: number;
+  total_impressions: number;
+  total_engagements: number;
+  total_reach: number;
+  engagement_rate: number;
+  best_performing_platform?: string;
 }
 
 interface AnalyticsOverviewProps {
@@ -21,36 +23,32 @@ interface AnalyticsOverviewProps {
 export function AnalyticsOverview({ data }: AnalyticsOverviewProps) {
   const metrics = [
     {
-      label: 'Total Views',
-      value: data.total_views,
-      change: data.views_change,
+      label: 'Total Posts',
+      value: data.total_posts,
+      icon: FileText,
+      color: 'text-gray-600',
+      bgColor: 'bg-gray-100',
+    },
+    {
+      label: 'Total Impressions',
+      value: data.total_impressions,
       icon: Eye,
       color: 'text-[#3b82f6]',
       bgColor: 'bg-blue-100',
     },
     {
-      label: 'Total Likes',
-      value: data.total_likes,
-      change: data.likes_change,
+      label: 'Total Engagements',
+      value: data.total_engagements,
       icon: Heart,
       color: 'text-[#f93a87]',
       bgColor: 'bg-pink-100',
     },
     {
-      label: 'Total Comments',
-      value: data.total_comments,
-      change: data.comments_change,
-      icon: MessageCircle,
+      label: 'Total Reach',
+      value: data.total_reach,
+      icon: Radar,
       color: 'text-[#22c55e]',
       bgColor: 'bg-green-100',
-    },
-    {
-      label: 'Total Shares',
-      value: data.total_shares,
-      change: data.shares_change,
-      icon: Share2,
-      color: 'text-gray-600',
-      bgColor: 'bg-gray-100',
     },
   ];
 
@@ -65,36 +63,52 @@ export function AnalyticsOverview({ data }: AnalyticsOverviewProps) {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {metrics.map((metric) => {
-        const Icon = metric.icon;
-        const isPositive = metric.change >= 0;
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {metrics.map((metric) => {
+          const Icon = metric.icon;
 
-        return (
-          <Card key={metric.label} className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className={`p-3 rounded-lg ${metric.bgColor}`}>
+          return (
+            <Card key={metric.label} className="p-6">
+              <div className={`p-3 rounded-lg w-fit mb-4 ${metric.bgColor}`}>
                 <Icon className={`h-6 w-6 ${metric.color}`} />
               </div>
-              <div className={`flex items-center gap-1 text-sm ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                {isPositive ? (
-                  <TrendingUp className="h-4 w-4" />
-                ) : (
-                  <TrendingDown className="h-4 w-4" />
-                )}
-                <span>{Math.abs(metric.change)}%</span>
-              </div>
-            </div>
 
+              <div>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatNumber(metric.value)}
+                </p>
+                <p className="text-sm text-gray-500 mt-1">{metric.label}</p>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      <Card className="p-6">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-lg bg-purple-100 w-fit">
+              <Percent className="h-6 w-6 text-[#8b5cf6]" />
+            </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
-                {formatNumber(metric.value)}
+                {data.engagement_rate.toFixed(2)}%
               </p>
-              <p className="text-sm text-gray-500 mt-1">{metric.label}</p>
+              <p className="text-sm text-gray-500">Engagement Rate</p>
             </div>
-          </Card>
-        );
-      })}
+          </div>
+
+          {data.best_performing_platform && (
+            <p className="text-sm text-gray-500">
+              Best performing platform:{' '}
+              <span className="font-semibold text-gray-900 capitalize">
+                {data.best_performing_platform}
+              </span>
+            </p>
+          )}
+        </div>
+      </Card>
     </div>
   );
 }
