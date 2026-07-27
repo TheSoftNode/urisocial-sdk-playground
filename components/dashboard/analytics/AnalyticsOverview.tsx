@@ -8,11 +8,11 @@ import { FileText, Eye, Heart, Radar, Percent } from 'lucide-react';
 // deltas — showing those anyway would mean fabricating numbers with no real source, so
 // this reflects only what the API genuinely provides.
 interface AnalyticsData {
-  total_posts: number;
-  total_impressions: number;
-  total_engagements: number;
-  total_reach: number;
-  engagement_rate: number;
+  total_posts?: number;
+  total_impressions?: number;
+  total_engagements?: number;
+  total_reach?: number;
+  engagement_rate?: number;
   best_performing_platform?: string;
 }
 
@@ -52,14 +52,15 @@ export function AnalyticsOverview({ data }: AnalyticsOverviewProps) {
     },
   ];
 
-  const formatNumber = (num: number) => {
-    if (num >= 1000000) {
-      return (num / 1000000).toFixed(1) + 'M';
+  const formatNumber = (num: number | undefined | null) => {
+    const n = num ?? 0;
+    if (n >= 1000000) {
+      return (n / 1000000).toFixed(1) + 'M';
     }
-    if (num >= 1000) {
-      return (num / 1000).toFixed(1) + 'K';
+    if (n >= 1000) {
+      return (n / 1000).toFixed(1) + 'K';
     }
-    return num.toString();
+    return n.toString();
   };
 
   return (
@@ -93,7 +94,7 @@ export function AnalyticsOverview({ data }: AnalyticsOverviewProps) {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
-                {data.engagement_rate.toFixed(2)}%
+                {(data.engagement_rate ?? 0).toFixed(2)}%
               </p>
               <p className="text-sm text-gray-500">Engagement Rate</p>
             </div>
