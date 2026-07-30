@@ -7,6 +7,8 @@ import { AnalyticsOverview } from '@/components/dashboard/analytics/AnalyticsOve
 import { PerformanceCharts } from '@/components/dashboard/analytics/PerformanceCharts';
 import { TopPosts } from '@/components/dashboard/analytics/TopPosts';
 import { AudienceInsights } from '@/components/dashboard/analytics/AudienceInsights';
+import { PlatformBreakdown } from '@/components/dashboard/analytics/PlatformBreakdown';
+import { TrendingTopics } from '@/components/dashboard/analytics/TrendingTopics';
 import { BarChart3, Loader2 } from 'lucide-react';
 
 export default function AnalyticsPage() {
@@ -29,15 +31,24 @@ export default function AnalyticsPage() {
       const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const endDate = new Date().toISOString().split('T')[0];
 
-      // The SDK has no time-series, per-post-list, or demographics endpoints —
-      // only aggregate performance + per-account follower stats. Rather than
-      // fabricate numbers with no real source, charts/topPosts/demographics/
+      // The SDK has no time-series or per-post-list endpoints, and no
+      // audience demographics endpoint at all — rather than fabricate
+      // numbers with no real source, charts/topPosts/demographics/
       // posting-times are left empty; each component already renders an
       // honest "no data available" state for that (verified in their code).
-      const [performance, accountMetrics] = await Promise.all([
+      // getByPlatform and getTrends ARE real and are wired in below.
+      const [performance, accountMetrics, byPlatform, brandProfile] = await Promise.all([
         client.analytics.getPerformance(startDate, endDate),
         client.analytics.getAccountMetrics().catch(() => ({ accounts: [] })),
+        client.analytics.getByPlatform(startDate, endDate).catch(() => ({ platforms: [] })),
+        client.brandProfile.get().catch(() => null),
       ]);
+
+      const industry = brandProfile?.responseData?.industry;
+      const region = brandProfile?.responseData?.region;
+      const trends = await client.analytics
+        .getTrends(industry, region)
+        .catch(() => ({ trending_topics: [], recommended_hashtags: [] }));
 
       const accounts = accountMetrics.accounts || [];
       const total_followers = accounts.reduce((sum, a) => sum + (a.follower_count || 0), 0);
@@ -54,6 +65,11 @@ export default function AnalyticsPage() {
         },
         charts: [],
         topPosts: [],
+        platforms: byPlatform.platforms || [],
+        trends: {
+          topics: trends.trending_topics || [],
+          hashtags: trends.recommended_hashtags || [],
+        },
         audience: {
           total_followers,
           follower_growth,
@@ -126,6 +142,12 @@ export default function AnalyticsPage() {
 
       {/* Top Posts */}
       <TopPosts posts={analyticsData.topPosts} />
+
+      {/* Platform Breakdown */}
+      <PlatformBreakdown platforms={analyticsData.platforms} />
+
+      {/* Trending Topics & Hashtags */}
+      <TrendingTopics topics={analyticsData.trends.topics} hashtags={analyticsData.trends.hashtags} />
 
       {/* Audience Insights */}
       <AudienceInsights data={analyticsData.audience} />

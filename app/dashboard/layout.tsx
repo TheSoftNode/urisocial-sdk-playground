@@ -6,9 +6,11 @@ import { useAuth } from '@/lib/auth/auth-context';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { SDKProvider } from '@/lib/sdk/sdk-provider';
 import { ToastProvider } from '@/components/ui/toast';
+import { GetAccessGate } from '@/components/access/get-access-gate';
+import { OnboardingGate } from '@/components/access/onboarding-gate';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -32,7 +34,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <SDKProvider>
       <ToastProvider>
-        <DashboardLayout>{children}</DashboardLayout>
+        {user?.sdkAccessGranted ? (
+          <OnboardingGate>
+            <DashboardLayout>{children}</DashboardLayout>
+          </OnboardingGate>
+        ) : (
+          <GetAccessGate />
+        )}
       </ToastProvider>
     </SDKProvider>
   );

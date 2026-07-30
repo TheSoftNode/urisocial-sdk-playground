@@ -12,7 +12,8 @@ import {
   Check,
   Send,
   Calendar,
-  Clock
+  Clock,
+  RefreshCw
 } from 'lucide-react';
 import Image from 'next/image';
 import { ConfirmModal } from '@/components/ui/modal';
@@ -61,6 +62,7 @@ export function DraftCard({ draft, onDelete, onUpdate, onRefresh }: DraftCardPro
   const [isPublishing, setIsPublishing] = useState(false);
   const [isScheduling, setIsScheduling] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showFullContent, setShowFullContent] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -200,6 +202,31 @@ export function DraftCard({ draft, onDelete, onUpdate, onRefresh }: DraftCardPro
       showToast(error.message || 'Failed to update draft. Please try again.', 'error');
     } finally {
       setIsEditing(false);
+    }
+  };
+
+  const handleRegenerate = async () => {
+    if (!client) return;
+
+    setIsRegenerating(true);
+    try {
+      const response = await client.content.regenerate(draft.id);
+      const regenerated = response.responseData?.drafts?.[0];
+      const regeneratedText = regenerated?.text_content?.[0]?.text;
+      if (regenerated && regeneratedText) {
+        await onUpdate(draft.id, {
+          content: regeneratedText,
+          caption: regeneratedText,
+          images: regenerated.image_url ? [regenerated.image_url] : draft.images,
+        });
+      }
+      showToast('Draft regenerated', 'success');
+      if (onRefresh) onRefresh();
+    } catch (error: any) {
+      console.error('Regenerate failed:', error);
+      showToast(error.message || 'Failed to regenerate draft. Please try again.', 'error');
+    } finally {
+      setIsRegenerating(false);
     }
   };
 
@@ -349,6 +376,19 @@ export function DraftCard({ draft, onDelete, onUpdate, onRefresh }: DraftCardPro
               <Edit2 className="h-4 w-4 mr-1" />
               Edit
             </Button>
+
+            {draft.status === 'draft' && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRegenerate}
+                disabled={isRegenerating}
+                className="flex-1 text-gray-600 hover:text-purple-600 hover:bg-purple-50"
+              >
+                <RefreshCw className={`h-4 w-4 mr-1 ${isRegenerating ? 'animate-spin' : ''}`} />
+                Regenerate
+              </Button>
+            )}
 
             <Button
               variant="ghost"

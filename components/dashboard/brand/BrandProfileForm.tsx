@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Loader2, Save } from 'lucide-react';
 import { useSDK } from '@/lib/sdk/sdk-provider';
+import { useToast } from '@/components/ui/toast';
 
 interface BrandBasics {
   brand_name?: string;
@@ -35,6 +36,7 @@ const INDUSTRIES = [
 
 export function BrandProfileForm() {
   const client = useSDK();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<BrandBasics>({
@@ -64,8 +66,8 @@ export function BrandProfileForm() {
           product_description: response.responseData.product_description || '',
         });
       }
-    } catch (error) {
-      console.error('Failed to load profile:', error);
+    } catch (error: any) {
+      showToast(error.message || 'Failed to load brand profile.', 'error');
     } finally {
       setLoading(false);
     }
@@ -80,15 +82,16 @@ export function BrandProfileForm() {
 
   const handleSave = async () => {
     if (!client) {
-      console.error('SDK client not initialized');
+      showToast('SDK client is not ready yet. Please try again in a moment.', 'error');
       return;
     }
 
     try {
       setSaving(true);
       await client.brandProfile.update(formData);
-    } catch (error) {
-      console.error('Failed to save:', error);
+      showToast('Brand basics saved.', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to save brand basics.', 'error');
     } finally {
       setSaving(false);
     }

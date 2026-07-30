@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useSDK } from '@/lib/sdk/sdk-provider';
 import { PlatformCard } from './PlatformCard';
 import { Loader2 } from 'lucide-react';
+import { ConfirmModal } from '@/components/ui/modal';
+import { useToast } from '@/components/ui/toast';
 
 interface Connection {
   id: string;
@@ -19,9 +21,12 @@ interface ConnectionsListProps {
 
 export function ConnectionsList({ onConnectionUpdated }: ConnectionsListProps) {
   const client = useSDK();
+  const { showToast } = useToast();
   const [connections, setConnections] = useState<Connection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [disconnectTarget, setDisconnectTarget] = useState<string | null>(null);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   useEffect(() => {
     loadConnections();
@@ -52,57 +57,52 @@ export function ConnectionsList({ onConnectionUpdated }: ConnectionsListProps) {
 
   const handleConnect = async (platform: string) => {
     if (!client) {
-      console.error('No SDK client available');
+      showToast('SDK client is not ready yet. Please try again in a moment.', 'error');
       return;
     }
 
-    console.log('🔗 Initiating connection for:', platform);
-
     try {
-      // Use initiate method with array of platforms
       const response = await client.connections.initiate({
         platforms: [platform as any],
         source: 'settings',
       });
 
-      console.log('✅ Connection response:', response);
-      console.log('🔑 Auth URLs:', response.auth_urls);
-
       const authUrls = response.auth_urls;
 
       if (authUrls && authUrls[platform]) {
-        const authUrl = authUrls[platform];
-        console.log('🚀 Redirecting to:', authUrl);
-
         // Redirect directly to OAuth URL - don't execute code after this
-        window.location.href = authUrl;
-        return; // Stop execution here
-      } else {
-        console.error('❌ No auth URL found for platform:', platform);
-        console.error('Available auth URLs:', authUrls);
-        setError(`No authorization URL received for ${platform}`);
+        window.location.href = authUrls[platform];
+        return;
       }
+
+      showToast(`No authorization URL received for ${platform}.`, 'error');
 
       // Only refresh if redirect didn't happen
       await loadConnections();
       onConnectionUpdated();
     } catch (err: any) {
-      console.error('❌ Connection error:', err);
-      setError(err.message || 'Failed to connect platform');
+      showToast(err.message || 'Failed to connect platform.', 'error');
     }
   };
 
-  const handleDisconnect = async (connectionId: string) => {
-    if (!client) return;
+  const handleDisconnect = (connectionId: string) => {
+    setDisconnectTarget(connectionId);
+  };
 
-    if (!confirm('Are you sure you want to disconnect this platform?')) return;
+  const confirmDisconnect = async () => {
+    if (!client || !disconnectTarget) return;
 
+    setDisconnecting(true);
     try {
-      await client.connections.disconnect(connectionId);
+      await client.connections.disconnect(disconnectTarget);
       await loadConnections();
       onConnectionUpdated();
+      showToast('Platform disconnected.', 'success');
     } catch (err: any) {
-      setError(err.message || 'Failed to disconnect platform');
+      showToast(err.message || 'Failed to disconnect platform.', 'error');
+    } finally {
+      setDisconnecting(false);
+      setDisconnectTarget(null);
     }
   };
 
@@ -131,20 +131,33 @@ export function ConnectionsList({ onConnectionUpdated }: ConnectionsListProps) {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {availablePlatforms.map((platform) => {
-        const connection = connections.find((c) => c.platform === platform.id);
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {availablePlatforms.map((platform) => {
+          const connection = connections.find((c) => c.platform === platform.id);
 
-        return (
-          <PlatformCard
-            key={platform.id}
-            platform={platform}
-            connection={connection}
-            onConnect={handleConnect}
-            onDisconnect={handleDisconnect}
-          />
-        );
-      })}
-    </div>
+          return (
+            <PlatformCard
+              key={platform.id}
+              platform={platform}
+              connection={connection}
+              onConnect={handleConnect}
+              onDisconnect={handleDisconnect}
+            />
+          );
+        })}
+      </div>
+
+      <ConfirmModal
+        open={!!disconnectTarget}
+        onClose={() => setDisconnectTarget(null)}
+        onConfirm={confirmDisconnect}
+        title="Disconnect platform"
+        message="Are you sure you want to disconnect this platform? You'll need to reconnect it to publish there again."
+        confirmText="Disconnect"
+        variant="destructive"
+        isLoading={disconnecting}
+      />
+    </>
   );
 }

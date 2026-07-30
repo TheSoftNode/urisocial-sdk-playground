@@ -33,6 +33,7 @@ export async function POST(request: NextRequest) {
         firstName: user.first_name,
         lastName: user.last_name,
         apiKey: user.api_key,
+        sdkAccessGranted: !!user.sdk_access_granted,
       },
     });
   } catch (error: any) {

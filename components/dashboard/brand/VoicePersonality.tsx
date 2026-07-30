@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Save, Loader2, Sparkles } from 'lucide-react';
 import { useSDK } from '@/lib/sdk/sdk-provider';
+import { useToast } from '@/components/ui/toast';
 
 const VOICE_OPTIONS = [
   { id: 'professional', name: 'Professional', description: 'Formal, authoritative, expert' },
@@ -18,6 +19,7 @@ const VOICE_OPTIONS = [
 
 export function VoicePersonality() {
   const client = useSDK();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -45,8 +47,8 @@ export function VoicePersonality() {
         setVoiceSample(response.responseData.voice_sample || '');
         setDerivedVoice(response.responseData.derived_voice || '');
       }
-    } catch (error) {
-      console.error('Failed to load voice:', error);
+    } catch (error: any) {
+      showToast(error.message || 'Failed to load voice settings.', 'error');
     } finally {
       setLoading(false);
     }
@@ -75,7 +77,10 @@ export function VoicePersonality() {
   };
 
   const handleSave = async () => {
-    if (!client) return;
+    if (!client) {
+      showToast('SDK client is not ready yet. Please try again in a moment.', 'error');
+      return;
+    }
 
     try {
       setSaving(true);
@@ -83,8 +88,9 @@ export function VoicePersonality() {
         derived_voice: selectedVoice,
         voice_sample: voiceSample,
       });
-    } catch (error) {
-      console.error('Failed to save voice:', error);
+      showToast('Voice settings saved.', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to save voice settings.', 'error');
     } finally {
       setSaving(false);
     }

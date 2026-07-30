@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, X, Save, Loader2 } from 'lucide-react';
 import { useSDK } from '@/lib/sdk/sdk-provider';
+import { useToast } from '@/components/ui/toast';
 
 export function ContentPillars() {
   const client = useSDK();
+  const { showToast } = useToast();
   const [pillars, setPillars] = useState<string[]>([]);
   const [newPillar, setNewPillar] = useState('');
   const [loading, setLoading] = useState(true);
@@ -31,8 +33,8 @@ export function ContentPillars() {
       if (response.responseData?.content_pillars) {
         setPillars(response.responseData.content_pillars);
       }
-    } catch (error) {
-      console.error('Failed to load pillars:', error);
+    } catch (error: any) {
+      showToast(error.message || 'Failed to load content pillars.', 'error');
     } finally {
       setLoading(false);
     }
@@ -50,13 +52,17 @@ export function ContentPillars() {
   };
 
   const handleSave = async () => {
-    if (!client) return;
+    if (!client) {
+      showToast('SDK client is not ready yet. Please try again in a moment.', 'error');
+      return;
+    }
 
     try {
       setSaving(true);
       await client.brandProfile.update({ content_pillars: pillars });
-    } catch (error) {
-      console.error('Failed to save pillars:', error);
+      showToast('Content pillars saved.', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to save content pillars.', 'error');
     } finally {
       setSaving(false);
     }

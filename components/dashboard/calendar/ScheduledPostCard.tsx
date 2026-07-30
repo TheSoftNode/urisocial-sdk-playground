@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Clock, Image as ImageIcon } from 'lucide-react';
+import { ConfirmModal } from '@/components/ui/modal';
 
 interface ScheduledPost {
   id: string;
@@ -37,15 +38,15 @@ const statusColors: Record<string, string> = {
 
 export function ScheduledPostCard({ post, onDelete, onUpdate }: ScheduledPostCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this scheduled post?')) return;
-
     setIsDeleting(true);
     try {
       await onDelete(post.id);
     } finally {
       setIsDeleting(false);
+      setConfirmOpen(false);
     }
   };
 
@@ -97,7 +98,7 @@ export function ScheduledPostCard({ post, onDelete, onUpdate }: ScheduledPostCar
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleDelete}
+            onClick={() => setConfirmOpen(true)}
             disabled={isDeleting}
             className="flex-1 text-gray-600 hover:text-red-600"
           >
@@ -106,6 +107,17 @@ export function ScheduledPostCard({ post, onDelete, onUpdate }: ScheduledPostCar
           </Button>
         </div>
       </div>
+
+      <ConfirmModal
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={handleDelete}
+        title="Delete scheduled post"
+        message="Are you sure you want to delete this scheduled post? This can't be undone."
+        confirmText="Delete"
+        variant="destructive"
+        isLoading={isDeleting}
+      />
     </Card>
   );
 }

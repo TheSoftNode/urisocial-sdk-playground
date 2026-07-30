@@ -18,6 +18,7 @@ export function initDatabase() {
       first_name TEXT NOT NULL,
       last_name TEXT NOT NULL,
       api_key TEXT,
+      sdk_access_granted INTEGER NOT NULL DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
@@ -25,6 +26,12 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     CREATE INDEX IF NOT EXISTS idx_users_api_key ON users(api_key);
   `);
+
+  // Migrate pre-existing databases that predate this column.
+  const columns = db.prepare(`PRAGMA table_info(users)`).all() as { name: string }[];
+  if (!columns.some((c) => c.name === 'sdk_access_granted')) {
+    db.exec(`ALTER TABLE users ADD COLUMN sdk_access_granted INTEGER NOT NULL DEFAULT 0`);
+  }
 }
 
 // Initialize database on import
@@ -42,6 +49,7 @@ export interface User {
   first_name: string;
   last_name: string;
   api_key: string | null;
+  sdk_access_granted: number;
   created_at: string;
 }
 
@@ -66,7 +74,7 @@ export function createUser(
 
 export function getUserByEmail(email: string): User | null {
   const stmt = db.prepare(`
-    SELECT id, email, first_name, last_name, api_key, created_at
+    SELECT id, email, first_name, last_name, api_key, sdk_access_granted, created_at
     FROM users
     WHERE email = ?
   `);
@@ -76,7 +84,7 @@ export function getUserByEmail(email: string): User | null {
 
 export function getUserById(id: string): User | null {
   const stmt = db.prepare(`
-    SELECT id, email, first_name, last_name, api_key, created_at
+    SELECT id, email, first_name, last_name, api_key, sdk_access_granted, created_at
     FROM users
     WHERE id = ?
   `);
@@ -88,7 +96,7 @@ export function verifyPassword(email: string, password: string): User | null {
   const passwordHash = hashPassword(password);
 
   const stmt = db.prepare(`
-    SELECT id, email, first_name, last_name, api_key, created_at
+    SELECT id, email, first_name, last_name, api_key, sdk_access_granted, created_at
     FROM users
     WHERE email = ? AND password_hash = ?
   `);
@@ -104,6 +112,17 @@ export function updateUserApiKey(userId: string, apiKey: string): void {
   `);
 
   stmt.run(apiKey, userId);
+}
+
+export function grantSdkAccess(userId: string): User | null {
+  const stmt = db.prepare(`
+    UPDATE users
+    SET sdk_access_granted = 1, updated_at = datetime('now')
+    WHERE id = ?
+  `);
+
+  stmt.run(userId);
+  return getUserById(userId);
 }
 
 export default db;

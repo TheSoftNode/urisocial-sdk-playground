@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, X, Save, Loader2 } from 'lucide-react';
 import { useSDK } from '@/lib/sdk/sdk-provider';
+import { useToast } from '@/components/ui/toast';
 
 export function ColorPicker() {
   const client = useSDK();
+  const { showToast } = useToast();
   const [colors, setColors] = useState<string[]>([]);
   const [newColor, setNewColor] = useState('#f93a87');
   const [loading, setLoading] = useState(true);
@@ -31,8 +33,8 @@ export function ColorPicker() {
       if (response.responseData?.brand_colors) {
         setColors(response.responseData.brand_colors);
       }
-    } catch (error) {
-      console.error('Failed to load colors:', error);
+    } catch (error: any) {
+      showToast(error.message || 'Failed to load brand colors.', 'error');
     } finally {
       setLoading(false);
     }
@@ -49,13 +51,17 @@ export function ColorPicker() {
   };
 
   const handleSave = async () => {
-    if (!client) return;
+    if (!client) {
+      showToast('SDK client is not ready yet. Please try again in a moment.', 'error');
+      return;
+    }
 
     try {
       setSaving(true);
       await client.brandProfile.update({ brand_colors: colors });
-    } catch (error) {
-      console.error('Failed to save colors:', error);
+      showToast('Brand colors saved.', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to save brand colors.', 'error');
     } finally {
       setSaving(false);
     }

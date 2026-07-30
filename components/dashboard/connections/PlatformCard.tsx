@@ -24,7 +24,7 @@ interface PlatformCardProps {
   platform: Platform;
   connection?: Connection;
   onConnect: (platform: string) => Promise<void>;
-  onDisconnect: (connectionId: string) => Promise<void>;
+  onDisconnect: (connectionId: string) => void;
 }
 
 export function PlatformCard({
@@ -47,15 +47,11 @@ export function PlatformCard({
     }
   };
 
-  const handleDisconnect = async () => {
+  const handleDisconnect = () => {
     if (!connection) return;
-
-    setIsProcessing(true);
-    try {
-      await onDisconnect(connection.id);
-    } finally {
-      setIsProcessing(false);
-    }
+    // Opens a confirmation modal upstream — the actual disconnect (and its
+    // own loading state) happens after the user confirms, not here.
+    onDisconnect(connection.id);
   };
 
   const isConnected = connection?.is_connected || false;

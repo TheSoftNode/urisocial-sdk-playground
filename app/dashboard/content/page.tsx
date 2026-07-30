@@ -6,10 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Sparkles, Loader2 } from 'lucide-react';
+import Link from 'next/link';
 import { PlatformSelector, type Platform } from '@/components/dashboard/content/PlatformSelector';
 import { ImageUpload } from '@/components/dashboard/content/ImageUpload';
 import { GenerationOptions } from '@/components/dashboard/content/GenerationOptions';
 import { GeneratedPreview } from '@/components/dashboard/content/GeneratedPreview';
+import { Input } from '@/components/ui/input';
 import { useSDK } from '@/lib/sdk/sdk-provider';
 
 export default function ContentGenerationPage() {
@@ -20,11 +22,27 @@ export default function ContentGenerationPage() {
   const [includeHashtags, setIncludeHashtags] = useState(true);
   const [includeEmojis, setIncludeEmojis] = useState(true);
   const [includeImages, setIncludeImages] = useState(false);
+  const [productName, setProductName] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [drafts, setDrafts] = useState<any[]>([]);
   const [error, setError] = useState<string>('');
+  const [selectedGuideCount, setSelectedGuideCount] = useState<number | null>(null);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Guide selection lives on the brand profile, not this form — surface the
+  // current state so it's clear generation will pick it up automatically.
+  useEffect(() => {
+    if (!client) return;
+    client.brandProfile
+      .get()
+      .then((res) => {
+        const v1 = res.responseData?.selected_custom_guides || [];
+        const v2 = res.responseData?.selected_custom_guides_v2 || [];
+        setSelectedGuideCount(v1.length + v2.length);
+      })
+      .catch(() => setSelectedGuideCount(null));
+  }, [client]);
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -141,6 +159,10 @@ export default function ContentGenerationPage() {
         referenceImage: referenceImage || undefined,
         include_images: includeImages,
         acknowledged_incomplete_profile: true,
+        // One-time override for this generation only — not saved to the
+        // brand's playbook. This is how an attached product/service name
+        // gets folded into the AI's context per-request.
+        brand_context: productName.trim() ? { key_products_services: [productName.trim()] } : undefined,
       } as any);
 
       if (result.responseData?.drafts) {
@@ -213,11 +235,40 @@ export default function ContentGenerationPage() {
                 </p>
               </div>
 
+              {/* Attached product/service — one-time context override, not saved to the brand profile */}
+              <div>
+                <Label htmlFor="productName">Attached product / service (optional)</Label>
+                <Input
+                  id="productName"
+                  value={productName}
+                  onChange={(e) => setProductName(e.target.value)}
+                  placeholder="E.g., 'Weekend Brunch Special'"
+                  className="mt-1"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Folded into this generation's brand context only — won't change your saved brand profile.
+                </p>
+              </div>
+
               {/* Platform Selection */}
               <PlatformSelector selected={platforms} onChange={setPlatforms} />
 
               {/* Reference Image */}
               <ImageUpload image={referenceImage} onImageChange={setReferenceImage} />
+
+              {/* Visual Guide status — attachment is persistent on the brand profile, not per-request */}
+              {selectedGuideCount !== null && (
+                <div className="p-3 rounded-lg bg-purple-50 text-purple-800 text-sm flex items-center justify-between gap-3">
+                  <span>
+                    {selectedGuideCount > 0
+                      ? `${selectedGuideCount} Visual Guide${selectedGuideCount === 1 ? '' : 's'} selected — this generation will rotate through ${selectedGuideCount === 1 ? 'it' : 'them'} automatically.`
+                      : 'No Visual Guide selected for this brand yet — generation uses your default style.'}
+                  </span>
+                  <Link href="/dashboard/visual-guides" className="underline whitespace-nowrap">
+                    Manage
+                  </Link>
+                </div>
+              )}
 
               {/* Options */}
               <GenerationOptions

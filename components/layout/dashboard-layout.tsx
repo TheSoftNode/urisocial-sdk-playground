@@ -17,10 +17,12 @@ import {
   ChevronLeft,
   ChevronRight,
   User,
-  Settings
+  Settings,
+  Sparkles
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { ConfirmModal } from '@/components/ui/modal';
 
 interface NavItem {
   name: string;
@@ -30,9 +32,10 @@ interface NavItem {
 
 const navigation: NavItem[] = [
   { name: 'Overview', href: '/dashboard', icon: Home },
-  { name: 'Onboarding Flow', href: '/dashboard/onboarding', icon: User },
+  { name: 'Onboarding', href: '/dashboard/onboarding', icon: User },
   { name: 'Brand Profile', href: '/dashboard/brand', icon: Palette },
   { name: 'Content Generator', href: '/dashboard/content', icon: FileText },
+  { name: 'Visual Guides', href: '/dashboard/visual-guides', icon: Sparkles },
   { name: 'Drafts', href: '/dashboard/drafts', icon: FileText },
   { name: 'Blog', href: '/dashboard/blog', icon: Newspaper },
   { name: 'Calendar', href: '/dashboard/calendar', icon: Calendar },
@@ -44,6 +47,7 @@ const navigation: NavItem[] = [
 export function DashboardLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
@@ -57,7 +61,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             navigation={navigation}
             pathname={pathname}
             user={user}
-            logout={logout}
+            onLogoutClick={() => setLogoutConfirmOpen(true)}
             onClose={() => setSidebarOpen(false)}
             collapsed={false}
           />
@@ -71,12 +75,25 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
             navigation={navigation}
             pathname={pathname}
             user={user}
-            logout={logout}
+            onLogoutClick={() => setLogoutConfirmOpen(true)}
             collapsed={sidebarCollapsed}
             onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
           />
         </div>
       </div>
+
+      <ConfirmModal
+        open={logoutConfirmOpen}
+        onClose={() => setLogoutConfirmOpen(false)}
+        onConfirm={() => {
+          setLogoutConfirmOpen(false);
+          logout();
+        }}
+        title="Log out"
+        message="Are you sure you want to log out?"
+        confirmText="Log out"
+        variant="destructive"
+      />
 
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -122,7 +139,7 @@ function Sidebar({
   navigation,
   pathname,
   user,
-  logout,
+  onLogoutClick,
   onClose,
   collapsed = false,
   onToggleCollapse,
@@ -130,7 +147,7 @@ function Sidebar({
   navigation: NavItem[];
   pathname: string;
   user: any;
-  logout: () => void;
+  onLogoutClick: () => void;
   onClose?: () => void;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
@@ -246,7 +263,7 @@ function Sidebar({
               </div>
             </div>
             <button
-              onClick={logout}
+              onClick={onLogoutClick}
               className="w-full flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100"
             >
               <LogOut className="h-5 w-5 mr-3" />
@@ -255,7 +272,7 @@ function Sidebar({
           </>
         ) : (
           <button
-            onClick={logout}
+            onClick={onLogoutClick}
             className="w-full flex items-center justify-center p-2 text-gray-700 rounded-md hover:bg-gray-100"
             title="Logout"
           >

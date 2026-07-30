@@ -1,572 +1,540 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useRouter } from 'next/navigation';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Users, UserPlus, FileText, Layers, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import {
+  Sparkles,
+  ArrowRight,
+  ArrowLeft,
+  Wand2,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  Rocket,
+  Shirt,
+  UtensilsCrossed,
+} from 'lucide-react';
 import { useSDK } from '@/lib/sdk/sdk-provider';
+import { useAuth } from '@/lib/auth/auth-context';
 
-export default function OnboardingTestPage() {
+type StepId = 'welcome' | 'basics' | 'voice' | 'review' | 'done';
+
+const STEPS: { id: StepId; label: string }[] = [
+  { id: 'welcome', label: 'Welcome' },
+  { id: 'basics', label: 'Brand Basics' },
+  { id: 'voice', label: 'Voice & Colors' },
+  { id: 'review', label: 'Save' },
+  { id: 'done', label: 'Done' },
+];
+
+const VOICE_OPTIONS = [
+  { id: 'professional', label: 'Professional', description: 'Formal, authoritative, expert' },
+  { id: 'friendly', label: 'Friendly', description: 'Warm, approachable, conversational' },
+  { id: 'playful', label: 'Playful', description: 'Fun, energetic, lighthearted' },
+  { id: 'inspiring', label: 'Inspiring', description: 'Motivational, uplifting, empowering' },
+  { id: 'educational', label: 'Educational', description: 'Informative, teaching-focused' },
+  { id: 'luxury', label: 'Luxury', description: 'Sophisticated, premium, exclusive' },
+];
+
+const COLOR_PRESETS = [
+  '#f93a87',
+  '#3b82f6',
+  '#22c55e',
+  '#f59e0b',
+  '#8b5cf6',
+  '#ef4444',
+  '#0ea5e9',
+  '#111827',
+];
+
+const BRAND_TEMPLATES = {
+  tech: {
+    label: 'Tech Startup',
+    icon: Rocket,
+    brandName: 'TechFlow AI',
+    industry: 'Technology',
+    description: 'AI-powered developer tools for modern engineering teams.',
+    brandVoice: 'professional',
+    colors: ['#3b82f6', '#111827'],
+  },
+  fashion: {
+    label: 'Fashion Brand',
+    icon: Shirt,
+    brandName: 'StyleVibe',
+    industry: 'Fashion',
+    description: 'Bold, trend-forward apparel for young urban professionals.',
+    brandVoice: 'playful',
+    colors: ['#f93a87', '#f59e0b'],
+  },
+  restaurant: {
+    label: 'Restaurant',
+    icon: UtensilsCrossed,
+    brandName: 'The Urban Kitchen',
+    industry: 'Food & Beverage',
+    description: 'Warm, community-driven neighborhood dining.',
+    brandVoice: 'friendly',
+    colors: ['#ef4444', '#f59e0b'],
+  },
+} as const;
+
+function AgentBubble({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mb-6 flex items-start gap-3">
+      <div
+        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full shadow-sm"
+        style={{ background: 'linear-gradient(135deg, #f93a87, #3b82f6)' }}
+      >
+        <Sparkles className="h-4 w-4 text-white" />
+      </div>
+      <div className="max-w-xl rounded-2xl rounded-tl-sm border border-pink-100 bg-pink-50/60 px-4 py-3 text-sm leading-relaxed text-gray-700">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function ProgressBar({ stepIndex }: { stepIndex: number }) {
+  const pct = (stepIndex / (STEPS.length - 1)) * 100;
+  return (
+    <div className="mb-8">
+      <div className="mb-2 flex justify-between">
+        {STEPS.map((s, i) => (
+          <span
+            key={s.id}
+            className={`text-[11px] font-medium transition-colors ${
+              i <= stepIndex ? 'text-[#f93a87]' : 'text-gray-400'
+            }`}
+          >
+            {s.label}
+          </span>
+        ))}
+      </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+        <div
+          className="h-full rounded-full transition-all duration-300"
+          style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #f93a87, #3b82f6)' }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function VoiceCard({
+  active,
+  onClick,
+  label,
+  desc,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  desc: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-xl border-2 p-3 text-left transition-all ${
+        active ? 'border-[#f93a87] bg-pink-50' : 'border-gray-200 bg-white hover:border-pink-300'
+      }`}
+    >
+      <p className={`text-sm font-semibold ${active ? 'text-[#f93a87]' : 'text-gray-900'}`}>{label}</p>
+      <p className="mt-0.5 text-[11px] text-gray-500">{desc}</p>
+    </button>
+  );
+}
+
+function NavButtons({
+  onBack,
+  onNext,
+  nextLabel,
+  nextDisabled,
+  loading,
+  showBack = true,
+}: {
+  onBack?: () => void;
+  onNext: () => void;
+  nextLabel: string;
+  nextDisabled?: boolean;
+  loading?: boolean;
+  showBack?: boolean;
+}) {
+  return (
+    <div className="mt-6 flex items-center gap-3">
+      {showBack && onBack && (
+        <Button variant="outline" onClick={onBack} disabled={loading}>
+          <ArrowLeft className="mr-1.5 h-4 w-4" />
+          Back
+        </Button>
+      )}
+      <Button
+        onClick={onNext}
+        disabled={nextDisabled || loading}
+        style={{ backgroundColor: '#f93a87' }}
+        className="ml-auto"
+      >
+        {loading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Working...
+          </>
+        ) : (
+          <>
+            {nextLabel}
+            <ArrowRight className="ml-1.5 h-4 w-4" />
+          </>
+        )}
+      </Button>
+    </div>
+  );
+}
+
+export default function OnboardingPage() {
   const client = useSDK();
-  const [endUserId, setEndUserId] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+  const router = useRouter();
+  const [stepIndex, setStepIndex] = useState(0);
+  const step = STEPS[stepIndex].id;
 
-  // Brand profile form
+  // Brand profile fields
   const [brandName, setBrandName] = useState('');
   const [industry, setIndustry] = useState('');
-  const [targetAudience, setTargetAudience] = useState('');
-  const [brandVoice, setBrandVoice] = useState('');
+  const [website, setWebsite] = useState('');
+  const [region, setRegion] = useState('');
+  const [description, setDescription] = useState('');
+  const [brandColors, setBrandColors] = useState<string[]>([]);
+  const [brandVoice, setBrandVoice] = useState('professional');
+  const [voiceSample, setVoiceSample] = useState('');
 
-  // Content generation
-  const [contentTopic, setContentTopic] = useState('');
-  const [generatedContent, setGeneratedContent] = useState<any>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
 
-  const handleQuickFill = (template: 'tech' | 'fashion' | 'restaurant') => {
-    const templates = {
-      tech: {
-        brandName: 'TechFlow AI',
-        industry: 'Technology',
-        targetAudience: 'Tech professionals, developers, and AI enthusiasts',
-        brandVoice: 'Professional yet approachable, data-driven, innovative',
-      },
-      fashion: {
-        brandName: 'StyleVibe',
-        industry: 'Fashion',
-        targetAudience: 'Young professionals 25-35, fashion-forward, urban lifestyle',
-        brandVoice: 'Trendy, bold, confident, Gen Z slang',
-      },
-      restaurant: {
-        brandName: 'The Urban Kitchen',
-        industry: 'Food & Beverage',
-        targetAudience: 'Food lovers, families, health-conscious millennials',
-        brandVoice: 'Warm, inviting, passionate about food, community-focused',
-      },
-    };
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-    const t = templates[template];
+  const goNext = () => setStepIndex((i) => Math.min(i + 1, STEPS.length - 1));
+  const goBack = () => setStepIndex((i) => Math.max(i - 1, 0));
+
+  const applyTemplate = (key: keyof typeof BRAND_TEMPLATES) => {
+    const t = BRAND_TEMPLATES[key];
     setBrandName(t.brandName);
     setIndustry(t.industry);
-    setTargetAudience(t.targetAudience);
+    setDescription(t.description);
     setBrandVoice(t.brandVoice);
+    setBrandColors([...t.colors]);
   };
 
-  const handleCreateBrandProfile = async () => {
-    if (!client) {
-      setError('SDK client not initialized');
-      return;
-    }
+  const toggleColor = (c: string) => {
+    setBrandColors((prev) =>
+      prev.includes(c) ? prev.filter((x) => x !== c) : prev.length < 3 ? [...prev, c] : prev
+    );
+  };
 
-    if (!endUserId) {
-      setError('End User ID is required');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setResult(null);
-
+  const handleAnalyzeVoice = async () => {
+    if (!client || !voiceSample.trim()) return;
+    setAnalyzing(true);
+    setAnalyzeError(null);
     try {
-      // Set the end user context
-      client.setEndUserId(endUserId);
+      const result = await client.brandProfile.analyzeVoiceSamples([voiceSample]);
+      if (VOICE_OPTIONS.some((v) => v.id === result.derived_voice)) {
+        setBrandVoice(result.derived_voice);
+      }
+    } catch (err: any) {
+      setAnalyzeError(err.message || 'Failed to analyze voice');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
-      // Update brand profile
-      const response = await client.brandProfile.update({
+  const handleSaveProfile = async () => {
+    if (!client) {
+      setSaveError('SDK client is not ready yet. Please try again in a moment.');
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
+    try {
+      // No end-user id to set here — the SDK provider already scoped this
+      // client to the signed-in playground account when it was created.
+      await client.brandProfile.update({
         brand_name: brandName,
-        industry: industry,
-        // BrandProfile has no target_audience field — there's no real
-        // equivalent to send it as; the input stays in the UI for context
-        // but isn't part of the actual API payload. voice_personality isn't
-        // real either — derived_voice is the closest actual field for a
-        // free-text tone/personality description.
+        industry,
+        website,
+        region: region || undefined,
+        product_description: description,
+        brand_colors: brandColors,
         derived_voice: brandVoice,
+        voice_sample: voiceSample || undefined,
+        onboarding_completed: true,
       });
-
-      setResult({
-        message: 'Brand profile created successfully!',
-        data: response,
-        status: 'success',
-      });
+      goNext();
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      setSaveError(err.message || 'Failed to save brand profile');
     } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGenerateContent = async () => {
-    if (!client) {
-      setError('SDK client not initialized');
-      return;
-    }
-
-    if (!endUserId || !contentTopic) {
-      setError('End User ID and Topic are required');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setGeneratedContent(null);
-
-    try {
-      client.setEndUserId(endUserId);
-
-      const response = await client.content.generate({
-        seedContent: contentTopic,
-        platforms: ['instagram'],
-      });
-
-      setGeneratedContent(response);
-      setResult({
-        message: 'Content generated successfully!',
-        status: 'success',
-      });
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpdateProfile = async () => {
-    if (!client) {
-      setError('SDK client not initialized');
-      return;
-    }
-
-    if (!endUserId) {
-      setError('End User ID is required');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setResult(null);
-
-    try {
-      client.setEndUserId(endUserId);
-
-      const response = await client.brandProfile.update({
-        brand_name: brandName,
-        industry: industry,
-        // BrandProfile has no target_audience field — there's no real
-        // equivalent to send it as; the input stays in the UI for context
-        // but isn't part of the actual API payload. voice_personality isn't
-        // real either — derived_voice is the closest actual field for a
-        // free-text tone/personality description.
-        derived_voice: brandVoice,
-      });
-
-      setResult({
-        message: 'Brand profile updated successfully!',
-        data: response,
-        status: 'success',
-      });
-    } catch (err: any) {
-      setError(err.message || 'An error occurred');
-    } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="mx-auto max-w-3xl p-6">
       {/* Header */}
-      <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center">
-              <Layers className="w-6 h-6 text-white" />
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">
+          {user?.firstName ? `Welcome, ${user.firstName}` : 'Welcome'}
+        </h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Let&apos;s set up your brand so URI Social can start creating content that sounds like you.
+        </p>
+      </div>
+
+      <ProgressBar stepIndex={stepIndex} />
+
+      <Card className="border border-gray-200">
+        <CardContent className="p-6">
+          {/* ══ WELCOME ══ */}
+          {step === 'welcome' && (
+            <div className="py-2 text-center">
+              <div
+                className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full shadow-md"
+                style={{ background: 'linear-gradient(135deg, #f93a87, #3b82f6)' }}
+              >
+                <Sparkles className="h-6 w-6 text-white" />
+              </div>
+              <h2 className="mb-2 text-xl font-bold text-gray-900">Meet your AI social media manager</h2>
+              <p className="mx-auto mb-6 max-w-md text-sm leading-relaxed text-gray-600">
+                A few quick steps and I&apos;ll know your brand well enough to write and design posts
+                that sound like you wrote them yourself.
+              </p>
+              <div className="mb-6 flex flex-wrap justify-center gap-2">
+                {['Brand Basics', 'Voice', 'Colors'].map((label) => (
+                  <span
+                    key={label}
+                    className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs text-gray-700"
+                  >
+                    {label}
+                  </span>
+                ))}
+              </div>
+              <Button onClick={goNext} style={{ backgroundColor: '#f93a87' }}>
+                Let&apos;s get started
+                <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Button>
             </div>
+          )}
+
+          {/* ══ BASICS ══ */}
+          {step === 'basics' && (
             <div>
-              <CardTitle className="text-2xl">End-User Onboarding Flow</CardTitle>
-              <CardDescription>
-                Test the complete user journey from signup to content generation
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-      </Card>
+              <AgentBubble>
+                First things first — what&apos;s your brand called? Pick a quick-fill template to
+                see it in action, or fill it in yourself.
+              </AgentBubble>
 
-      {/* Visual Flow */}
-      <Card className="bg-white border-2 border-indigo-200">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <span className="text-2xl">🔄</span>
-            User Flow: Signup → Onboarding → Generate → Update
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-6">
-            <div className="space-y-4">
-              {/* Step 1 */}
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
-                  1
+              <div className="mb-4 grid grid-cols-3 gap-2">
+                {(Object.keys(BRAND_TEMPLATES) as (keyof typeof BRAND_TEMPLATES)[]).map((key) => {
+                  const t = BRAND_TEMPLATES[key];
+                  const Icon = t.icon;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => applyTemplate(key)}
+                      className="rounded-xl border-2 border-gray-200 p-3 text-center transition-all hover:border-pink-300"
+                    >
+                      <Icon className="mx-auto mb-1.5 h-4 w-4 text-gray-500" />
+                      <p className="text-xs font-medium text-gray-700">{t.label}</p>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <Label className="mb-2">Brand Name *</Label>
+                  <Input value={brandName} onChange={(e) => setBrandName(e.target.value)} placeholder="e.g. Bloom Coffee Roasters" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="mb-2">Industry</Label>
+                    <Input value={industry} onChange={(e) => setIndustry(e.target.value)} placeholder="e.g. Food & Beverage" />
+                  </div>
+                  <div>
+                    <Label className="mb-2">City</Label>
+                    <Input value={region} onChange={(e) => setRegion(e.target.value)} placeholder="e.g. Austin, TX" />
+                  </div>
                 </div>
                 <div>
-                  <p className="font-semibold text-sm">User Signs Up (Tab 1: Simple Onboard)</p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    Quick test with just user ID → <code className="bg-gray-100 px-1 rounded">client.setEndUserId('user_001')</code>
-                  </p>
+                  <Label className="mb-2">Website (optional)</Label>
+                  <Input value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://yourbrand.com" />
+                </div>
+                <div>
+                  <Label className="mb-2">What does your business do?</Label>
+                  <Textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="1-2 sentences about your business..."
+                    rows={3}
+                  />
                 </div>
               </div>
 
-              {/* Step 2 */}
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-600 text-white flex items-center justify-center font-bold text-sm">
-                  2
-                </div>
-                <div>
-                  <p className="font-semibold text-sm">User Completes Full Onboarding (Tab 2)</p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    Complete brand setup with templates → <code className="bg-gray-100 px-1 rounded">client.brandProfile.update(...)</code>
-                  </p>
+              <NavButtons onBack={goBack} onNext={goNext} nextLabel="Continue" nextDisabled={!brandName.trim()} />
+            </div>
+          )}
+
+          {/* ══ VOICE & COLORS ══ */}
+          {step === 'voice' && (
+            <div>
+              <AgentBubble>
+                Pick a brand voice, or paste a writing sample and let AI detect it for you. Then
+                choose up to 3 brand colors — I&apos;ll use these in every post I create.
+              </AgentBubble>
+
+              <Label className="mb-2">Brand Voice</Label>
+              <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-3">
+                {VOICE_OPTIONS.map((v) => (
+                  <VoiceCard
+                    key={v.id}
+                    active={brandVoice === v.id}
+                    onClick={() => setBrandVoice(v.id)}
+                    label={v.label}
+                    desc={v.description}
+                  />
+                ))}
+              </div>
+
+              <Label className="mb-2">Or paste a sample and let AI detect the voice</Label>
+              <Textarea
+                value={voiceSample}
+                onChange={(e) => setVoiceSample(e.target.value)}
+                placeholder="Paste a caption or paragraph that sounds like your brand..."
+                rows={3}
+                className="mb-2"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleAnalyzeVoice}
+                disabled={analyzing || !voiceSample.trim()}
+                style={{ borderColor: '#3b82f6', color: '#3b82f6' }}
+              >
+                {analyzing ? (
+                  <>
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="mr-1.5 h-3.5 w-3.5" />
+                    Analyze Voice
+                  </>
+                )}
+              </Button>
+              {analyzeError && <p className="mt-2 text-xs text-red-600">{analyzeError}</p>}
+
+              <div className="mt-6">
+                <Label className="mb-2">
+                  Brand Colors <span className="font-normal text-gray-400">({brandColors.length}/3 selected)</span>
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {COLOR_PRESETS.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => toggleColor(c)}
+                      className="h-8 w-8 rounded-lg transition-all"
+                      style={{
+                        background: c,
+                        border: brandColors.includes(c) ? '3px solid white' : '3px solid transparent',
+                        boxShadow: brandColors.includes(c) ? `0 0 0 2px ${c}` : 'none',
+                      }}
+                    />
+                  ))}
                 </div>
               </div>
 
-              {/* Step 3 */}
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-sm">
-                  3
+              <NavButtons onBack={goBack} onNext={goNext} nextLabel="Continue" />
+            </div>
+          )}
+
+          {/* ══ REVIEW & SAVE ══ */}
+          {step === 'review' && (
+            <div>
+              <AgentBubble>
+                Here&apos;s what I&apos;ll save to your brand profile. This calls{' '}
+                <code className="rounded bg-white/60 px-1 py-0.5">client.brandProfile.update()</code>.
+              </AgentBubble>
+
+              <div className="space-y-2 rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Brand Name</span>
+                  <span className="font-medium text-gray-900">{brandName || '—'}</span>
                 </div>
-                <div>
-                  <p className="font-semibold text-sm">User Updates Profile Later (Tab 3)</p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    Modify brand settings → <code className="bg-gray-100 px-1 rounded">client.brandProfile.update(...)</code>
-                  </p>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Industry</span>
+                  <span className="font-medium text-gray-900">{industry || '—'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">City</span>
+                  <span className="font-medium text-gray-900">{region || '—'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Voice</span>
+                  <span className="font-medium capitalize text-gray-900">{brandVoice}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-gray-500">Colors</span>
+                  <div className="flex gap-1">
+                    {brandColors.length > 0 ? (
+                      brandColors.map((c) => (
+                        <div key={c} className="h-4 w-4 rounded" style={{ background: c }} />
+                      ))
+                    ) : (
+                      <span className="font-medium text-gray-900">—</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Step 4 */}
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-600 text-white flex items-center justify-center font-bold text-sm">
-                  4
-                </div>
-                <div>
-                  <p className="font-semibold text-sm">User Generates Content (Tab 4)</p>
-                  <p className="text-xs text-gray-600 mt-1">
-                    Create posts using their profile → <code className="bg-gray-100 px-1 rounded">client.content.generate(...)</code>
-                  </p>
-                </div>
+              {saveError && (
+                <Alert variant="destructive" className="mt-4">
+                  <XCircle className="h-4 w-4" />
+                  <AlertDescription>{saveError}</AlertDescription>
+                </Alert>
+              )}
+
+              <NavButtons onBack={goBack} onNext={handleSaveProfile} nextLabel="Save Brand Profile" loading={saving} />
+            </div>
+          )}
+
+          {/* ══ DONE ══ */}
+          {step === 'done' && (
+            <div className="py-2 text-center">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
+                <CheckCircle2 className="h-7 w-7 text-green-600" />
+              </div>
+              <h2 className="mb-2 text-xl font-bold text-gray-900">Your brand is set up</h2>
+              <p className="mx-auto mb-6 max-w-md text-sm leading-relaxed text-gray-600">
+                {brandName || 'Your brand'} is ready. Head to the Content Generator to create your
+                first AI-powered post.
+              </p>
+              <div className="flex justify-center gap-3">
+                <Button style={{ backgroundColor: '#f93a87' }} onClick={() => router.push('/dashboard/content')}>
+                  Generate my first post
+                  <ArrowRight className="ml-1.5 h-4 w-4" />
+                </Button>
+                <Button variant="outline" onClick={() => router.push('/dashboard')}>
+                  Go to dashboard
+                </Button>
               </div>
             </div>
-          </div>
-
-          {/* Key Benefits */}
-          <div className="grid grid-cols-3 gap-3 mt-4">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-              <div className="text-2xl mb-2">🔒</div>
-              <p className="font-semibold text-xs text-green-900">Data Isolation</p>
-              <p className="text-xs text-green-700 mt-1">Each user sees only their data</p>
-            </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <div className="text-2xl mb-2">⚡</div>
-              <p className="font-semibold text-xs text-blue-900">Zero Setup</p>
-              <p className="text-xs text-blue-700 mt-1">No database required</p>
-            </div>
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-              <div className="text-2xl mb-2">🎯</div>
-              <p className="font-semibold text-xs text-purple-900">Auto Context</p>
-              <p className="text-xs text-purple-700 mt-1">Brand profile applied automatically</p>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
-
-      {/* Testing Tabs */}
-      <Tabs defaultValue="simple" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="simple">
-            <div className="flex flex-col items-start text-xs">
-              <span>1️⃣ Simple Onboard</span>
-              <span className="text-[10px] text-gray-500 font-normal">Just ID</span>
-            </div>
-          </TabsTrigger>
-          <TabsTrigger value="full">
-            <div className="flex flex-col items-start text-xs">
-              <span>2️⃣ Full Onboarding</span>
-              <span className="text-[10px] text-gray-500 font-normal">Complete setup</span>
-            </div>
-          </TabsTrigger>
-          <TabsTrigger value="update">
-            <div className="flex flex-col items-start text-xs">
-              <span>3️⃣ Update Profile</span>
-              <span className="text-[10px] text-gray-500 font-normal">Modify settings</span>
-            </div>
-          </TabsTrigger>
-          <TabsTrigger value="generate">
-            <div className="flex flex-col items-start text-xs">
-              <span>4️⃣ Generate Content</span>
-              <span className="text-[10px] text-gray-500 font-normal">Test output</span>
-            </div>
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Tab 1: Simple Onboard */}
-        <TabsContent value="simple">
-          <Card>
-            <CardHeader>
-              <CardTitle>Simple User Onboard</CardTitle>
-              <CardDescription>Quick test - just set end-user ID context</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="simpleUserId">End User ID *</Label>
-                <Input
-                  id="simpleUserId"
-                  placeholder="user_001"
-                  value={endUserId}
-                  onChange={(e) => setEndUserId(e.target.value)}
-                />
-              </div>
-              <Button
-                onClick={() => {
-                  if (client && endUserId) {
-                    client.setEndUserId(endUserId);
-                    setResult({ message: `Context set to user: ${endUserId}`, status: 'success' });
-                  }
-                }}
-                disabled={!client || !endUserId}
-                className="w-full"
-              >
-                <UserPlus className="w-4 h-4 mr-2" />
-                Set User Context
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Tab 2: Full Onboarding */}
-        <TabsContent value="full">
-          <Card>
-            <CardHeader>
-              <CardTitle>Full Brand Onboarding</CardTitle>
-              <CardDescription>Complete brand setup with quick-fill templates</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="fullUserId">End User ID *</Label>
-                <Input
-                  id="fullUserId"
-                  placeholder="demo_user_001"
-                  value={endUserId}
-                  onChange={(e) => setEndUserId(e.target.value)}
-                />
-              </div>
-
-              {/* Quick Fill Templates */}
-              <div className="space-y-2">
-                <Label>Quick Fill Templates</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleQuickFill('tech')} className="text-xs">
-                    🚀 Tech Startup
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleQuickFill('fashion')} className="text-xs">
-                    👗 Fashion Brand
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleQuickFill('restaurant')} className="text-xs">
-                    🍽️ Restaurant
-                  </Button>
-                </div>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label className="text-xs">Brand Name</Label>
-                    <Input value={brandName} onChange={(e) => setBrandName(e.target.value)} className="text-sm" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs">Industry</Label>
-                    <Input value={industry} onChange={(e) => setIndustry(e.target.value)} className="text-sm" />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs">Target Audience</Label>
-                  <Input value={targetAudience} onChange={(e) => setTargetAudience(e.target.value)} className="text-sm" />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs">Brand Voice</Label>
-                  <Input value={brandVoice} onChange={(e) => setBrandVoice(e.target.value)} className="text-sm" />
-                </div>
-              </div>
-
-              <Button
-                onClick={handleCreateBrandProfile}
-                disabled={loading || !client || !endUserId}
-                className="w-full"
-                style={{ backgroundColor: '#0A66C2', color: '#fff' }}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Users className="w-4 h-4 mr-2" />
-                    Create Complete Brand Profile
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Tab 3: Update Profile */}
-        <TabsContent value="update">
-          <Card>
-            <CardHeader>
-              <CardTitle>Update Brand Profile</CardTitle>
-              <CardDescription>Modify existing user's brand settings</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="updateUserId">End User ID *</Label>
-                <Input
-                  id="updateUserId"
-                  placeholder="demo_user_001"
-                  value={endUserId}
-                  onChange={(e) => setEndUserId(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Brand Name</Label>
-                <Input value={brandName} onChange={(e) => setBrandName(e.target.value)} />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Industry</Label>
-                <Input value={industry} onChange={(e) => setIndustry(e.target.value)} />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Target Audience</Label>
-                <Input value={targetAudience} onChange={(e) => setTargetAudience(e.target.value)} />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Brand Voice</Label>
-                <Input value={brandVoice} onChange={(e) => setBrandVoice(e.target.value)} />
-              </div>
-
-              <Button
-                onClick={handleUpdateProfile}
-                disabled={loading || !client || !endUserId}
-                className="w-full"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="w-4 h-4 mr-2" />
-                    Update Brand Profile
-                  </>
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Tab 4: Generate Content */}
-        <TabsContent value="generate">
-          <Card>
-            <CardHeader>
-              <CardTitle>Generate Content</CardTitle>
-              <CardDescription>Test content generation with user's brand profile</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="genUserId">End User ID *</Label>
-                <Input
-                  id="genUserId"
-                  placeholder="demo_user_001"
-                  value={endUserId}
-                  onChange={(e) => setEndUserId(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="topic">Content Topic *</Label>
-                <Input
-                  id="topic"
-                  placeholder="Summer product launch"
-                  value={contentTopic}
-                  onChange={(e) => setContentTopic(e.target.value)}
-                />
-              </div>
-
-              <Button
-                onClick={handleGenerateContent}
-                disabled={loading || !client || !endUserId || !contentTopic}
-                className="w-full"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Layers className="w-4 h-4 mr-2" />
-                    Generate Content
-                  </>
-                )}
-              </Button>
-
-              {generatedContent && (
-                <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <h4 className="font-semibold mb-2 text-sm">Generated Content:</h4>
-                  <pre className="text-xs overflow-auto whitespace-pre-wrap">
-                    {JSON.stringify(generatedContent, null, 2)}
-                  </pre>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Results Display */}
-      {error && (
-        <Alert variant="destructive">
-          <XCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {result && result.status === 'success' && (
-        <Alert className="border-green-200 bg-green-50">
-          <CheckCircle className="h-4 w-4 text-green-600" />
-          <AlertDescription className="text-green-800">{result.message}</AlertDescription>
-        </Alert>
-      )}
-
-      {result && result.data && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Response Data</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <pre className="text-xs bg-gray-50 p-4 rounded-lg overflow-auto border border-gray-200">
-              {JSON.stringify(result.data, null, 2)}
-            </pre>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

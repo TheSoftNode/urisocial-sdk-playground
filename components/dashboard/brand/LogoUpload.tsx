@@ -5,9 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, X, Loader2, Image as ImageIcon } from 'lucide-react';
 import { useSDK } from '@/lib/sdk/sdk-provider';
+import { useToast } from '@/components/ui/toast';
 
 export function LogoUpload({ logoUrl }: { logoUrl?: string }) {
   const client = useSDK();
+  const { showToast } = useToast();
   const [logo, setLogo] = useState<string | undefined>(logoUrl);
   const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -15,17 +17,17 @@ export function LogoUpload({ logoUrl }: { logoUrl?: string }) {
 
   const handleFileSelect = async (file: File) => {
     if (!client) {
-      console.error('SDK client not initialized');
+      showToast('SDK client is not ready yet. Please try again in a moment.', 'error');
       return;
     }
 
     if (!file.type.startsWith('image/')) {
-      alert('Please upload an image file');
+      showToast('Please upload an image file.', 'error');
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      alert('Image must be under 5MB');
+      showToast('Image must be under 5MB.', 'error');
       return;
     }
 
@@ -34,9 +36,9 @@ export function LogoUpload({ logoUrl }: { logoUrl?: string }) {
       const response = await client.brandProfile.uploadLogo(file);
       setLogo(response.logo_url);
       await client.brandProfile.update({ logo_url: response.logo_url });
-    } catch (error) {
-      console.error('Failed to upload logo:', error);
-      alert('Failed to upload logo');
+      showToast('Logo uploaded.', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to upload logo.', 'error');
     } finally {
       setUploading(false);
     }
@@ -51,15 +53,20 @@ export function LogoUpload({ logoUrl }: { logoUrl?: string }) {
 
   const handleRemove = async () => {
     if (!client) {
-      console.error('SDK client not initialized');
+      showToast('SDK client is not ready yet. Please try again in a moment.', 'error');
       return;
     }
 
+    const previousLogo = logo;
     try {
       setLogo(undefined);
-      await client.brandProfile.update({ logo_url: undefined });
-    } catch (error) {
-      console.error('Failed to remove logo:', error);
+      // An empty string (not undefined) is what actually clears the field —
+      // undefined gets dropped by JSON serialization and the update is a no-op.
+      await client.brandProfile.update({ logo_url: '' });
+      showToast('Logo removed.', 'success');
+    } catch (error: any) {
+      setLogo(previousLogo);
+      showToast(error.message || 'Failed to remove logo.', 'error');
     }
   };
 
