@@ -23,6 +23,7 @@ import {
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ConfirmModal } from '@/components/ui/modal';
+import { SdkConnectionPanel } from '@/components/layout/SdkConnectionPanel';
 
 interface NavItem {
   name: string;
@@ -246,6 +247,9 @@ function Sidebar({
           </button>
         </div>
       )}
+
+      {/* Live SDK connection info */}
+      {!collapsed && <SdkConnectionPanel />}
 
       {/* User section */}
       <div className="px-3 py-4 border-t border-gray-200">

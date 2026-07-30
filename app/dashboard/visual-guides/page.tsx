@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Sparkles, Upload, Loader2, Trash2, CheckCircle2 } from 'lucide-react';
 import { useSDK } from '@/lib/sdk/sdk-provider';
 import { useToast } from '@/components/ui/toast';
+import { SdkCallTag } from '@/components/ui/sdk-call-tag';
 import type { CustomGuide } from '@urisocial/sdk';
 
 export default function VisualGuidesPage() {
@@ -124,11 +125,13 @@ export default function VisualGuidesPage() {
         </div>
       </div>
 
+      <SdkCallTag method="client.customGuides.uploadReferenceImage() · .listGuides() · client.brandProfile.update()" />
+
       <Card className="p-4 bg-blue-50 ring-blue-200">
         <p className="text-sm text-blue-800">
-          Guides work by <strong>persistent selection</strong>, not per-post attachment: select one or more guides
-          below and every future image generation for this brand rotates through them automatically. There's no
-          per-request &quot;guide_id&quot; parameter — selection lives on the brand profile.
+          Selecting a guide is a one-time choice, not something you attach post by post: turn one or more guides
+          on below, and every post you generate from now on will automatically use them — no need to pick a guide
+          each time you create content.
         </p>
       </Card>
 

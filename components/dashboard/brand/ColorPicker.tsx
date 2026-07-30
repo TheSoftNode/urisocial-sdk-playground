@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Plus, X, Save, Loader2 } from 'lucide-react';
 import { useSDK } from '@/lib/sdk/sdk-provider';
 import { useToast } from '@/components/ui/toast';
+import { LoadingState } from '@/components/ui/loading-state';
 
 export function ColorPicker() {
   const client = useSDK();
@@ -68,13 +69,7 @@ export function ColorPicker() {
   };
 
   if (loading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#f93a87' }} />
-        </CardContent>
-      </Card>
-    );
+    return <LoadingState label="Loading brand colors…" />;
   }
 
   return (

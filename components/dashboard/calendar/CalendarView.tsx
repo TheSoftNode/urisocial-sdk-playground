@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useSDK } from '@/lib/sdk/sdk-provider';
 import { ScheduledPostCard } from './ScheduledPostCard';
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { LoadingState } from '@/components/ui/loading-state';
 
 interface ScheduledPost {
   id: string;
@@ -104,11 +105,7 @@ export function CalendarView({ onPostUpdated }: CalendarViewProps) {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-[#f93a87]" />
-      </div>
-    );
+    return <LoadingState label="Loading your content calendar…" />;
   }
 
   if (error) {

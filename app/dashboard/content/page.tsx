@@ -12,6 +12,7 @@ import { ImageUpload } from '@/components/dashboard/content/ImageUpload';
 import { GenerationOptions } from '@/components/dashboard/content/GenerationOptions';
 import { GeneratedPreview } from '@/components/dashboard/content/GeneratedPreview';
 import { Input } from '@/components/ui/input';
+import { SdkCallTag } from '@/components/ui/sdk-call-tag';
 import { useSDK } from '@/lib/sdk/sdk-provider';
 
 export default function ContentGenerationPage() {
@@ -309,6 +310,7 @@ export default function ContentGenerationPage() {
                   </>
                 )}
               </Button>
+              <SdkCallTag method="client.content.generate()" />
             </CardContent>
           </Card>
         </div>

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { ConnectionsList } from '@/components/dashboard/connections/ConnectionsList';
+import { SdkCallTag } from '@/components/ui/sdk-call-tag';
 import { Link2 } from 'lucide-react';
 
 export default function ConnectionsPage() {
@@ -26,6 +27,8 @@ export default function ConnectionsPage() {
           </p>
         </div>
       </div>
+
+      <SdkCallTag method="client.connections.list() · .initiate() · .disconnect()" />
 
       {/* Info Card */}
       <Card className="p-4 bg-blue-50 border-blue-200">

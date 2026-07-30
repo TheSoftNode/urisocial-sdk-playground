@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { DraftsList } from '@/components/dashboard/drafts/DraftsList';
 import { DraftFilter } from '@/components/dashboard/drafts/DraftFilter';
+import { SdkCallTag } from '@/components/ui/sdk-call-tag';
 import { FileText } from 'lucide-react';
 
 export default function DraftsPage() {
@@ -37,6 +38,8 @@ export default function DraftsPage() {
           </p>
         </div>
       </div>
+
+      <SdkCallTag method="client.drafts.list() · .regenerate() · client.publishing.approve()" />
 
       {/* Filters */}
       <Card className="p-4">

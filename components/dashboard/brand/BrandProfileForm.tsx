@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Save } from 'lucide-react';
 import { useSDK } from '@/lib/sdk/sdk-provider';
 import { useToast } from '@/components/ui/toast';
+import { INDUSTRIES } from '@/lib/constants/industries';
+import { LoadingState } from '@/components/ui/loading-state';
 
 interface BrandBasics {
   brand_name?: string;
@@ -17,22 +19,6 @@ interface BrandBasics {
   tagline?: string;
   product_description?: string;
 }
-
-const INDUSTRIES = [
-  'E-commerce',
-  'Technology',
-  'Healthcare',
-  'Finance',
-  'Education',
-  'Food & Beverage',
-  'Fashion',
-  'Travel',
-  'Real Estate',
-  'Entertainment',
-  'Sports',
-  'Non-Profit',
-  'Other',
-];
 
 export function BrandProfileForm() {
   const client = useSDK();
@@ -46,6 +32,9 @@ export function BrandProfileForm() {
     tagline: '',
     product_description: '',
   });
+  // True once the user picks "Other" (or the loaded value isn't in the
+  // preset list) — shows a free-text field instead of the dropdown.
+  const [customIndustry, setCustomIndustry] = useState(false);
 
   const loadProfile = async () => {
     if (!client) {
@@ -58,13 +47,15 @@ export function BrandProfileForm() {
       setLoading(true);
       const response = await client.brandProfile.get();
       if (response.responseData) {
+        const industry = response.responseData.industry || '';
         setFormData({
           brand_name: response.responseData.brand_name || '',
-          industry: response.responseData.industry || '',
+          industry,
           website: response.responseData.website || '',
           tagline: response.responseData.tagline || '',
           product_description: response.responseData.product_description || '',
         });
+        setCustomIndustry(!!industry && !(INDUSTRIES as readonly string[]).includes(industry));
       }
     } catch (error: any) {
       showToast(error.message || 'Failed to load brand profile.', 'error');
@@ -98,13 +89,7 @@ export function BrandProfileForm() {
   };
 
   if (loading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#f93a87' }} />
-        </CardContent>
-      </Card>
-    );
+    return <LoadingState label="Loading brand basics…" />;
   }
 
   return (
@@ -126,19 +111,48 @@ export function BrandProfileForm() {
 
         <div>
           <Label htmlFor="industry">Industry *</Label>
-          <select
-            id="industry"
-            value={formData.industry}
-            onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-            className="w-full mt-1 h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
-          >
-            <option value="">Select industry</option>
-            {INDUSTRIES.map((industry) => (
-              <option key={industry} value={industry.toLowerCase()}>
-                {industry}
-              </option>
-            ))}
-          </select>
+          {customIndustry ? (
+            <div className="mt-1 flex gap-2">
+              <Input
+                id="industry"
+                value={formData.industry}
+                onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
+                placeholder="Your industry"
+                className="flex-1"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomIndustry(false);
+                  setFormData({ ...formData, industry: '' });
+                }}
+                className="text-xs text-gray-500 hover:text-gray-700 whitespace-nowrap"
+              >
+                Choose from list
+              </button>
+            </div>
+          ) : (
+            <select
+              id="industry"
+              value={formData.industry || ''}
+              onChange={(e) => {
+                if (e.target.value === 'Other') {
+                  setCustomIndustry(true);
+                  setFormData({ ...formData, industry: '' });
+                } else {
+                  setFormData({ ...formData, industry: e.target.value });
+                }
+              }}
+              className="w-full mt-1 h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
+            >
+              <option value="">Select industry</option>
+              {INDUSTRIES.map((industry) => (
+                <option key={industry} value={industry}>
+                  {industry}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div>

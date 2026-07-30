@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSDK } from '@/lib/sdk/sdk-provider';
 import { PlatformCard } from './PlatformCard';
 import { Loader2 } from 'lucide-react';
+import { LoadingState } from '@/components/ui/loading-state';
 import { ConfirmModal } from '@/components/ui/modal';
 import { useToast } from '@/components/ui/toast';
 
@@ -107,11 +108,7 @@ export function ConnectionsList({ onConnectionUpdated }: ConnectionsListProps) {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-[#f93a87]" />
-      </div>
-    );
+    return <LoadingState label="Checking connected accounts…" />;
   }
 
   if (error) {

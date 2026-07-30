@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Save, Loader2, Sparkles } from 'lucide-react';
 import { useSDK } from '@/lib/sdk/sdk-provider';
 import { useToast } from '@/components/ui/toast';
+import { LoadingState } from '@/components/ui/loading-state';
 
 const VOICE_OPTIONS = [
   { id: 'professional', name: 'Professional', description: 'Formal, authoritative, expert' },
@@ -97,13 +98,7 @@ export function VoicePersonality() {
   };
 
   if (loading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin" style={{ color: '#f93a87' }} />
-        </CardContent>
-      </Card>
-    );
+    return <LoadingState label="Loading brand voice…" />;
   }
 
   return (

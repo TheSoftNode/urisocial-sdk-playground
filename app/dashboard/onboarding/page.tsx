@@ -21,6 +21,7 @@ import {
   UtensilsCrossed,
 } from 'lucide-react';
 import { useSDK } from '@/lib/sdk/sdk-provider';
+import { INDUSTRIES } from '@/lib/constants/industries';
 import { useAuth } from '@/lib/auth/auth-context';
 
 type StepId = 'welcome' | 'basics' | 'voice' | 'review' | 'done';
@@ -204,6 +205,7 @@ export default function OnboardingPage() {
   // Brand profile fields
   const [brandName, setBrandName] = useState('');
   const [industry, setIndustry] = useState('');
+  const [customIndustry, setCustomIndustry] = useState(false);
   const [website, setWebsite] = useState('');
   const [region, setRegion] = useState('');
   const [description, setDescription] = useState('');
@@ -360,7 +362,46 @@ export default function OnboardingPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="mb-2">Industry</Label>
-                    <Input value={industry} onChange={(e) => setIndustry(e.target.value)} placeholder="e.g. Food & Beverage" />
+                    {customIndustry ? (
+                      <div className="flex gap-2">
+                        <Input
+                          value={industry}
+                          onChange={(e) => setIndustry(e.target.value)}
+                          placeholder="Your industry"
+                          className="flex-1"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCustomIndustry(false);
+                            setIndustry('');
+                          }}
+                          className="text-xs text-gray-500 hover:text-gray-700 whitespace-nowrap"
+                        >
+                          Choose from list
+                        </button>
+                      </div>
+                    ) : (
+                      <select
+                        value={industry}
+                        onChange={(e) => {
+                          if (e.target.value === 'Other') {
+                            setCustomIndustry(true);
+                            setIndustry('');
+                          } else {
+                            setIndustry(e.target.value);
+                          }
+                        }}
+                        className="w-full h-10 px-3 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
+                      >
+                        <option value="">Select industry</option>
+                        {INDUSTRIES.map((i) => (
+                          <option key={i} value={i}>
+                            {i}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                   <div>
                     <Label className="mb-2">City</Label>

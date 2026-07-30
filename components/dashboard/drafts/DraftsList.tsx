@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useSDK } from '@/lib/sdk/sdk-provider';
 import { DraftCard } from './DraftCard';
-import { Loader2 } from 'lucide-react';
+import { LoadingState } from '@/components/ui/loading-state';
+import { EmptyState } from '@/components/ui/empty-state';
+import { FileText } from 'lucide-react';
 
 interface Draft {
   id: string;
@@ -99,11 +101,7 @@ export function DraftsList({ filters, onDraftUpdated }: DraftsListProps) {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-[#f93a87]" />
-      </div>
-    );
+    return <LoadingState label="Loading your drafts…" />;
   }
 
   if (error) {
@@ -116,9 +114,11 @@ export function DraftsList({ filters, onDraftUpdated }: DraftsListProps) {
 
   if (drafts.length === 0) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-500">No drafts found. Create some content to get started!</p>
-      </div>
+      <EmptyState
+        icon={FileText}
+        title="No drafts yet"
+        description="Generate your first post from the Content Generator and it'll show up here."
+      />
     );
   }
 

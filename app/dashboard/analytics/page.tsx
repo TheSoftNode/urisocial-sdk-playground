@@ -9,7 +9,8 @@ import { TopPosts } from '@/components/dashboard/analytics/TopPosts';
 import { AudienceInsights } from '@/components/dashboard/analytics/AudienceInsights';
 import { PlatformBreakdown } from '@/components/dashboard/analytics/PlatformBreakdown';
 import { TrendingTopics } from '@/components/dashboard/analytics/TrendingTopics';
-import { BarChart3, Loader2 } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
+import { LoadingState } from '@/components/ui/loading-state';
 
 export default function AnalyticsPage() {
   const client = useSDK();
@@ -89,8 +90,8 @@ export default function AnalyticsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-[#f93a87]" />
+      <div className="min-h-[400px]">
+        <LoadingState label="Fetching performance data from URI Social…" />
       </div>
     );
   }

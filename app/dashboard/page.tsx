@@ -122,9 +122,11 @@ export default function DashboardPage() {
               <stat.icon className="h-4 w-4 text-gray-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900">
-                {stat.value === null ? '—' : stat.value}
-              </div>
+              {stat.value === null ? (
+                <div className="h-8 w-14 rounded bg-gray-100 animate-pulse" aria-label="Loading" />
+              ) : (
+                <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
+              )}
               {stat.sublabel && <p className="text-xs text-gray-500 mt-1">{stat.sublabel}</p>}
             </CardContent>
           </Card>
