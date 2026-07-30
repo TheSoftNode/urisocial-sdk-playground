@@ -18,7 +18,8 @@ import {
   ChevronRight,
   User,
   Settings,
-  Sparkles
+  Sparkles,
+  Users,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -29,6 +30,10 @@ interface NavItem {
   name: string;
   href: string;
   icon: React.ElementType;
+  /** 'admin' items are the SDK CLIENT's own view (e.g. Feest's internal
+   * team), not something an individual end-user would ever see on a real
+   * platform built on the SDK — kept visually separate for that reason. */
+  section?: 'admin';
 }
 
 const navigation: NavItem[] = [
@@ -43,6 +48,7 @@ const navigation: NavItem[] = [
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
   { name: 'Connections', href: '/dashboard/connections', icon: Link2 },
   { name: 'Video', href: '/dashboard/video', icon: Video },
+  { name: 'Manage Users', href: '/dashboard/users', icon: Users, section: 'admin' },
 ];
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
@@ -212,25 +218,36 @@ function Sidebar({
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navigation.map((item) => {
+        {navigation.map((item, i) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
+          const isFirstAdminItem = item.section === 'admin' && navigation[i - 1]?.section !== 'admin';
           return (
-            <Link
-              key={item.name}
-              href={item.href}
-              onClick={onClose}
-              className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors ${
-                isActive
-                  ? 'text-white'
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-              }`}
-              style={isActive ? { backgroundColor: '#f93a87' } : {}}
-              title={collapsed ? item.name : undefined}
-            >
-              <Icon className={`h-5 w-5 flex-shrink-0 ${collapsed ? '' : 'mr-3'}`} />
-              {!collapsed && item.name}
-            </Link>
+            <div key={item.name}>
+              {isFirstAdminItem && (
+                <div className="pt-3 mt-2 mb-1 border-t border-gray-200">
+                  {!collapsed && (
+                    <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                      Client admin
+                    </p>
+                  )}
+                </div>
+              )}
+              <Link
+                href={item.href}
+                onClick={onClose}
+                className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors ${
+                  isActive
+                    ? 'text-white'
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                }`}
+                style={isActive ? { backgroundColor: '#f93a87' } : {}}
+                title={collapsed ? item.name : undefined}
+              >
+                <Icon className={`h-5 w-5 flex-shrink-0 ${collapsed ? '' : 'mr-3'}`} />
+                {!collapsed && item.name}
+              </Link>
+            </div>
           );
         })}
       </nav>

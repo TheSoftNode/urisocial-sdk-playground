@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Plug } from 'lucide-react';
 import { useSDK } from '@/lib/sdk/sdk-provider';
 
@@ -18,6 +19,23 @@ function mask(key: string | undefined): string {
  */
 export function SdkConnectionPanel() {
   const client = useSDK();
+  const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
+  const [brandName, setBrandName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!client) return;
+    setStatus('loading');
+    client.brandProfile
+      .get()
+      .then((res) => {
+        setBrandName(res.responseData?.brand_name || null);
+        setStatus('loaded');
+      })
+      .catch(() => {
+        setStatus('error');
+      });
+  }, [client]);
+
   const apiKey = process.env.NEXT_PUBLIC_URISOCIAL_API_KEY;
   const endUserId = client?.getEndUserId();
 
@@ -40,6 +58,18 @@ export function SdkConnectionPanel() {
           <dt className="text-gray-400">End-user ID</dt>
           <dd className="text-gray-700 truncate" title={endUserId}>
             {endUserId ? `${endUserId.slice(0, 8)}…` : '—'}
+          </dd>
+        </div>
+        <div className="flex justify-between gap-2">
+          <dt className="text-gray-400">Workspace</dt>
+          <dd className="text-gray-700 truncate">
+            {status === 'loading' ? (
+              <span className="inline-block h-3 w-16 rounded bg-gray-200 animate-pulse align-middle" />
+            ) : status === 'error' ? (
+              '—'
+            ) : (
+              brandName || '—'
+            )}
           </dd>
         </div>
       </dl>
