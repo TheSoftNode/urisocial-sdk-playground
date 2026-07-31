@@ -9,6 +9,7 @@ import {
   BarChart3,
   Link2,
   Video,
+  Scissors,
   Palette,
   Newspaper,
   Menu,
@@ -47,7 +48,8 @@ const navigation: NavItem[] = [
   { name: 'Calendar', href: '/dashboard/calendar', icon: Calendar },
   { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
   { name: 'Connections', href: '/dashboard/connections', icon: Link2 },
-  { name: 'Video', href: '/dashboard/video', icon: Video },
+  { name: 'Video Storyboard', href: '/dashboard/video', icon: Video },
+  { name: 'Video Editor', href: '/dashboard/video-editor', icon: Scissors },
   { name: 'Manage Users', href: '/dashboard/users', icon: Users, section: 'admin' },
 ];
 

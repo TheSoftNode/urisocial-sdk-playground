@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@urisocial/react": "^3.1.1",
-    "@urisocial/sdk": "^3.1.5",
+    "@urisocial/sdk": "^3.2.0",
     "better-sqlite3": "^12.11.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
