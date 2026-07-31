@@ -66,9 +66,15 @@ export function VoicePersonality() {
     try {
       setAnalyzing(true);
       setAnalyzeError(null);
-      const result = await client.brandProfile.analyzeVoiceSamples([voiceSample]);
-      setDerivedVoice(result.derived_voice);
-      setSelectedVoice(result.derived_voice);
+      // false = preview only, don't merge into the saved profile yet — the
+      // user still has to click Save below for that.
+      const result = await client.brandProfile.analyzeVoiceSamples([voiceSample], false);
+      // The analysis returns a free-form tone (e.g. "warm", "sarcastic",
+      // "bold") extracted from the sample, not one of the six preset
+      // VOICE_OPTIONS ids below — there's no reliable mapping between the
+      // two, so just surface what was detected and let the user pick the
+      // closest preset themselves instead of guessing on their behalf.
+      setDerivedVoice(result.analysis.tone || '');
     } catch (error: any) {
       console.error('Failed to analyze voice:', error);
       setAnalyzeError(error.message || 'Failed to analyze voice');

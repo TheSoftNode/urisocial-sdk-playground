@@ -215,6 +215,7 @@ export default function OnboardingPage() {
 
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  const [detectedTone, setDetectedTone] = useState('');
 
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -242,10 +243,15 @@ export default function OnboardingPage() {
     setAnalyzing(true);
     setAnalyzeError(null);
     try {
-      const result = await client.brandProfile.analyzeVoiceSamples([voiceSample]);
-      if (VOICE_OPTIONS.some((v) => v.id === result.derived_voice)) {
-        setBrandVoice(result.derived_voice);
-      }
+      // false = preview only, don't merge into the saved profile yet —
+      // handleSaveProfile below sends the user's actual selected brandVoice.
+      const result = await client.brandProfile.analyzeVoiceSamples([voiceSample], false);
+      // The analysis returns a free-form tone (e.g. "warm", "sarcastic",
+      // "bold") extracted from the sample, not one of the preset
+      // VOICE_OPTIONS ids — there's no reliable mapping between the two, so
+      // just surface what was detected and let the user pick the closest
+      // preset themselves instead of guessing on their behalf.
+      setDetectedTone(result.analysis.tone || '');
     } catch (err: any) {
       setAnalyzeError(err.message || 'Failed to analyze voice');
     } finally {
@@ -477,6 +483,12 @@ export default function OnboardingPage() {
                 )}
               </Button>
               {analyzeError && <p className="mt-2 text-xs text-red-600">{analyzeError}</p>}
+              {detectedTone && !analyzeError && (
+                <p className="mt-2 text-xs text-gray-500">
+                  AI detected tone: <span className="font-medium capitalize text-gray-700">{detectedTone}</span> —
+                  pick the closest match above.
+                </p>
+              )}
 
               <div className="mt-6">
                 <Label className="mb-2">
