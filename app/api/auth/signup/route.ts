@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already exists
-    const existingUser = getUserByEmail(email);
+    const existingUser = await getUserByEmail(email);
     if (existingUser) {
       return NextResponse.json(
         { error: 'User with this email already exists' },
@@ -23,8 +23,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create user
-    const user = createUser(email, password, firstName, lastName);
+    // Create user. The check above is inherently racy under concurrent
+    // requests — the unique index on email is the real guard, so a
+    // duplicate-key error here means someone else's request won the race.
+    let user;
+    try {
+      user = await createUser(email, password, firstName, lastName);
+    } catch (err: any) {
+      if (err?.code === 11000) {
+        return NextResponse.json(
+          { error: 'User with this email already exists' },
+          { status: 409 }
+        );
+      }
+      throw err;
+    }
 
     return NextResponse.json({
       user: {
